@@ -10,10 +10,10 @@
 <div><label>ชื่อผู้เรียน</label><input id="name" placeholder="ชื่อเล่นหรือชื่อผู้เรียน"></div>
 <div><label>สกร.ระดับตำบล</label><input id="tambon" placeholder="เช่น สกร.ระดับตำบลโนนสูง"></div>
 <div><label>ระดับ</label><select id="level"><option>ประถมศึกษา</option><option>มัธยมศึกษาตอนต้น</option><option>มัธยมศึกษาตอนปลาย</option></select></div>
-</div><br><button id="startBtn" type="button" class="primary">🚀 เริ่มภารกิจ</button><p id="msg" class="small"></p></section>
+</div><br><button id="startBtn" type="button" class="primary" onclick="window.startGame()">🚀 เริ่มภารกิจ</button><p id="msg" class="small"></p></section>
 
-<section id="game" class="card hidden"><div class="row"><h2>🗺️ แผนที่ภารกิจ</h2><button id="wallBtn" type="button" class="soft">💬 Learning Wall</button></div><div id="quests"></div></section>
-<section id="wall" class="card hidden"><div class="row"><h2>💬 Learning Wall</h2><button id="backBtn" type="button" class="soft">← กลับเกม</button></div><div id="wallList"></div></section>
+<section id="game" class="card hidden"><div class="row"><h2>🗺️ แผนที่ภารกิจ</h2><button class="soft" onclick="wall()">💬 Learning Wall</button></div><div id="quests"></div></section>
+<section id="wall" class="card hidden"><div class="row"><h2>💬 Learning Wall</h2><button class="soft" onclick="back()">← กลับเกม</button></div><div id="wallList"></div></section>
 </div>
 <script>
 const API_URL="https://script.google.com/macros/s/AKfycbyVaulBJqyuBEiPfAB62eypHKyR271JhZ1YJKImo9yqFLqlQkk99bxNRE_pLCuWGa-UDA/exec";
@@ -23,8 +23,16 @@ const qs=[
 ["💡","ภารกิจ 03 • นักคิด","สิ่งที่ฉันเรียนรู้ มีความสำคัญอย่างไร?",20],
 ["🎤","ภารกิจ 04 • นักเล่า","ถ้าให้ฉันเล่าเรื่องนี้ให้เพื่อนฟัง ฉันจะเล่าว่าอย่างไร?",25],
 ["🚀","ภารกิจ 05 • นักนำไปใช้","ฉันจะนำสิ่งที่เรียนรู้ไปใช้ในชีวิตจริงอย่างไร?",25]];
-let S=JSON.parse(localStorage.getItem("LQ_STATE")||'{"xp":0,"done":[],"answers":[]}');
-let P=JSON.parse(localStorage.getItem("LQ_PROFILE")||"null");
+let S={xp:0,done:[],answers:[]};
+let P=null;
+try{
+  const rawState=localStorage.getItem("LQ_STATE");
+  if(rawState) S=JSON.parse(rawState);
+}catch(e){ S={xp:0,done:[],answers:[]}; localStorage.removeItem("LQ_STATE"); }
+try{
+  const rawProfile=localStorage.getItem("LQ_PROFILE");
+  if(rawProfile) P=JSON.parse(rawProfile);
+}catch(e){ P=null; localStorage.removeItem("LQ_PROFILE"); }
 function start(){
  const nameEl=document.getElementById("name");
  const tambonEl=document.getElementById("tambon");
@@ -39,31 +47,13 @@ function start(){
  loginEl.classList.add("hidden");gameEl.classList.remove("hidden");
  render();update();loadWall();
 }
-function render(){document.getElementById("quests").innerHTML=qs.map((q,i)=>{let d=S.done.includes(i);return `<div class="quest"><h3>${q[0]} ${q[1]} <span class="badge">+${q[3]} XP</span></h3><p>${q[2]}</p>${d?'<div class="ok">✅ ทำภารกิจแล้ว</div>':`<textarea id="a${i}" placeholder="เขียนคำตอบของฉัน..."></textarea><br><button type="button" class="primary submitQ" data-q="${i}">ส่งภารกิจ 🚀</button>`}</div>`}).join("")}
+window.startGame=function(){ try{ start(); }catch(e){ console.error(e); const m=document.getElementById("msg"); if(m){m.textContent="เกิดข้อผิดพลาด กรุณารีเฟรชหน้าเว็บแล้วลองใหม่";m.className="err";} } };
+function render(){document.getElementById("quests").innerHTML=qs.map((q,i)=>{let d=S.done.includes(i);return `<div class="quest"><h3>${q[0]} ${q[1]} <span class="badge">+${q[3]} XP</span></h3><p>${q[2]}</p>${d?'<div class="ok">✅ ทำภารกิจแล้ว</div>':`<textarea id="a${i}" placeholder="เขียนคำตอบของฉัน..."></textarea><br><button class="primary" onclick="submitQ(${i})">ส่งภารกิจ 🚀</button>`}</div>`}).join("")}
 function submitQ(i){let a=document.getElementById("a"+i).value.trim();if(!a){alert("กรุณาเขียนคำตอบ");return}let item={name:P.name,tambon:P.tambon,level:P.level,quest:qs[i][1],answer:a,xp:qs[i][3]};S.done.push(i);S.xp+=qs[i][3];S.answers.push(item);localStorage.setItem("LQ_STATE",JSON.stringify(S));send(item);render();update();loadWall();if(S.xp>=100)alert("🏆 MASTER LEARNER! คุณทำครบ 100 XP แล้ว")}
 function update(){document.getElementById("xp").textContent=S.xp;document.getElementById("fill").style.width=Math.min(S.xp,100)+"%"}
-function send(item){if(!API_URL||API_URL.includes("__API_URL__"))return;fetch(API_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action:"save",data:item})}).then(()=>msg.textContent="บันทึกข้อมูลออนไลน์แล้ว").catch(()=>{})}
+function send(item){if(!API_URL||API_URL.includes("__API_URL__"))return;fetch(API_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({action:"save",data:item})}).then(()=>{const m=document.getElementById("msg");if(m)m.textContent="บันทึกข้อมูลออนไลน์แล้ว"}).catch(()=>{})}
 function loadWall(){let a=S.answers.slice().reverse();document.getElementById("wallList").innerHTML=a.length?a.map(x=>`<div class="wall"><b>${esc(x.name)}</b> · ${esc(x.tambon)}<br>${esc(x.answer)}<div class="small muted">${esc(x.quest)}</div></div>`).join(""):"ยังไม่มีคำตอบในเครื่องนี้"}
 function wall(){document.getElementById("game").classList.add("hidden");document.getElementById("wall").classList.remove("hidden");loadWall()}function back(){document.getElementById("wall").classList.add("hidden");document.getElementById("game").classList.remove("hidden")}
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]))}
-document.addEventListener("DOMContentLoaded",function(){
- const startBtn=document.getElementById("startBtn");
- const wallBtn=document.getElementById("wallBtn");
- const backBtn=document.getElementById("backBtn");
- if(startBtn) startBtn.addEventListener("click",start);
- if(wallBtn) wallBtn.addEventListener("click",wall);
- if(backBtn) backBtn.addEventListener("click",back);
- document.getElementById("quests").addEventListener("click",function(e){
-   const btn=e.target.closest(".submitQ");
-   if(btn) submitQ(Number(btn.dataset.q));
- });
- if(P){
-   document.getElementById("name").value=P.name||"";
-   document.getElementById("tambon").value=P.tambon||"";
-   document.getElementById("level").value=P.level||"ประถมศึกษา";
-   document.getElementById("login").classList.add("hidden");
-   document.getElementById("game").classList.remove("hidden");
-   render();update();loadWall();
- }
-});
+if(P){document.getElementById("name").value=P.name;document.getElementById("tambon").value=P.tambon;document.getElementById("level").value=P.level;document.getElementById("login").classList.add("hidden");document.getElementById("game").classList.remove("hidden");render();update();loadWall()}
 </script></body></html>
