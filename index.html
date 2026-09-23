@@ -5,9 +5,9 @@
 :root{--a:#c2410c;--b:#f59e0b;--bg:#fff7ed;--ink:#2b2118}*{box-sizing:border-box}body{margin:0;font-family:system-ui,"Noto Sans Thai",sans-serif;background:linear-gradient(135deg,#fff7ed,#fef3c7);color:var(--ink)}.wrap{max-width:1100px;margin:auto;padding:18px}.hero{background:linear-gradient(135deg,#7c2d12,#ea580c,#f59e0b);color:#fff;border-radius:28px;padding:28px;box-shadow:0 12px 30px #7c2d1230}.hero h1{font-size:clamp(34px,6vw,60px);margin:0}.hero p{font-size:18px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px}.card{background:#fff;border-radius:22px;padding:22px;margin-top:18px;box-shadow:0 8px 24px #7c2d1218}label{font-weight:800}input,select,textarea{width:100%;padding:13px;margin-top:7px;border:2px solid #fed7aa;border-radius:14px;font-size:16px}textarea{min-height:120px}button{border:0;border-radius:14px;padding:13px 18px;font-weight:800;font-size:16px;cursor:pointer}.primary{background:var(--a);color:white}.soft{background:#ffedd5;color:#9a3412}.quest{border:2px solid #fed7aa;border-radius:20px;padding:18px;margin:14px 0}.xp{font-size:28px;font-weight:900}.bar{height:14px;background:#ffedd5;border-radius:20px;overflow:hidden}.fill{height:100%;width:0;background:linear-gradient(90deg,#fbbf24,#ea580c);transition:.4s}.badge{display:inline-block;padding:6px 11px;border-radius:99px;background:#fef3c7;color:#92400e;font-weight:800}.wall{border-left:5px solid #f59e0b;background:#fff7ed;border-radius:12px;padding:12px;margin:10px 0}.hidden{display:none}.row{display:flex;gap:10px;justify-content:space-between;align-items:center;flex-wrap:wrap}.muted{color:#73543e}.ok{color:#15803d;font-weight:800}.err{color:#b91c1c;font-weight:800}.small{font-size:13px}
 </style></head><body><div class="wrap">
 <section class="hero"><div class="row"><div><h1>🎮 ภารกิจนักเรียนรู้</h1><p>LEARNER QUEST • คิด • ค้นพบ • สะท้อน • แบ่งปัน • นำไปใช้</p></div><div class="xp">⭐ <span id="xp">0</span> XP</div></div>
-<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px">
-<button type="button" id="newGameBtn" class="soft">🔄 เริ่มเกมใหม่</button>
-<button type="button" id="dashboardBtn" class="soft">📊 Dashboard ครู</button>
+<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px">
+<button type="button" class="soft" onclick="window.resetLearnerGame()">🔄 เริ่มเกมใหม่</button>
+<button type="button" class="soft" onclick="window.openTeacherDashboard()">📊 Dashboard ครู</button>
 </div>
 <div class="bar"><div id="fill" class="fill"></div></div></section>
 
@@ -21,21 +21,6 @@
 <section id="wall" class="card hidden"><div class="row"><h2>💬 Learning Wall</h2><button class="soft" onclick="back()">← กลับเกม</button></div><div id="wallList"></div></section>
 </div>
 <script>
-function newGameNow(){
-  if(!confirm("ต้องการเริ่มเกมใหม่ใช่หรือไม่?\nข้อมูลที่บันทึกลง Google Sheets แล้วจะไม่ถูกลบ")){
-    return;
-  }
-  try{
-    localStorage.removeItem("LQ_STATE");
-    localStorage.removeItem("LQ_PROFILE");
-  }catch(e){}
-  location.reload();
-}
-function openDashboard(){
-  window.open("dashboard.html","_blank","noopener");
-}
-</script>
-<script>
 const API_URL="https://script.google.com/macros/s/AKfycbyVaulBJqyuBEiPfAB62eypHKyR271JhZ1YJKImo9yqFLqlQkk99bxNRE_pLCuWGa-UDA/exec";
 const qs=[
 ["🌱","ภารกิจ 01 • เริ่มต้นการเรียนรู้","วันนี้ฉันมาเรียนด้วยความรู้สึกอย่างไร?",10],
@@ -45,14 +30,17 @@ const qs=[
 ["🚀","ภารกิจ 05 • นักนำไปใช้","ฉันจะนำสิ่งที่เรียนรู้ไปใช้ในชีวิตจริงอย่างไร?",25]];
 let S={xp:0,done:[],answers:[]};
 let P=null;
-try{
-  const raw=localStorage.getItem("LQ_STATE");
-  if(raw) S=JSON.parse(raw);
-}catch(e){localStorage.removeItem("LQ_STATE");}
-try{
-  const raw=localStorage.getItem("LQ_PROFILE");
-  if(raw) P=JSON.parse(raw);
-}catch(e){localStorage.removeItem("LQ_PROFILE");}
+try{const raw=localStorage.getItem("LQ_STATE");if(raw) S=JSON.parse(raw);}catch(e){localStorage.removeItem("LQ_STATE");}
+try{const raw=localStorage.getItem("LQ_PROFILE");if(raw) P=JSON.parse(raw);}catch(e){localStorage.removeItem("LQ_PROFILE");}
+window.resetLearnerGame=function(){
+ if(!confirm("เริ่มเกมใหม่หรือไม่?\nข้อมูลที่ส่งเข้า Google Sheets แล้วจะไม่ถูกลบ")) return;
+ try{localStorage.removeItem("LQ_STATE");localStorage.removeItem("LQ_PROFILE");}catch(e){}
+ location.href=location.pathname+"?new="+Date.now();
+};
+window.openTeacherDashboard=function(){
+ const w=window.open("dashboard.html","_blank");
+ if(!w) alert("กรุณาอนุญาต Pop-up สำหรับเว็บไซต์นี้");
+};
 function start(){
  const nameEl=document.getElementById("name");
  const tambonEl=document.getElementById("tambon");
